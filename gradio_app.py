@@ -10,6 +10,7 @@ import torch
 import numpy as np
 import gradio as gr
 import tempfile
+import gc
 
 gradio_temp_dir = os.path.join(tempfile.gettempdir(), 'gradio')
 os.makedirs(gradio_temp_dir, exist_ok=True)
@@ -130,7 +131,7 @@ def chat_fn(message: str, history: list, seed:int, temperature: float, top_p: fl
     input_ids = llm_tokenizer.apply_chat_template(
         conversation, return_tensors="pt", add_generation_prompt=True).to(llm_model.device)
 
-    streamer = TextIteratorStreamer(llm_tokenizer, timeout=10.0, skip_prompt=True, skip_special_tokens=True)
+    streamer = TextIteratorStreamer(llm_tokenizer, timeout=120.0, skip_prompt=True, skip_special_tokens=True)
 
     def interactive_stopping_criteria(*args, **kwargs) -> bool:
         if getattr(streamer, 'user_interrupted', False):
@@ -181,7 +182,8 @@ def post_chat(history):
             canvas_outputs = canvas.process()
     except Exception as e:
         print('Last assistant response is not valid canvas:', e)
-
+    #gc.collect()
+    #torch.cuda.empty_cache()
     return canvas_outputs, gr.update(visible=canvas_outputs is not None), gr.update(interactive=len(history) > 0)
 
 
@@ -290,6 +292,16 @@ footer {display: none !important; visibility: hidden !important;}
 
 from gradio.themes.utils import colors
 
+
+
+
+def clear_memory():
+    gc.collect()
+    torch.cuda.empty_cache()
+    return None
+
+
+
 with gr.Blocks(
         fill_height=True, css=css,
         theme=gr.themes.Default(primary_hue=colors.blue, secondary_hue=colors.cyan, neutral_hue=colors.gray)
@@ -300,7 +312,8 @@ with gr.Blocks(
                 clear_btn = gr.Button("➕ New Chat", variant="secondary", size="sm", min_width=60)
                 retry_btn = gr.Button("Retry", variant="secondary", size="sm", min_width=60, visible=False)
                 undo_btn = gr.Button("✏️️ Edit Last Input", variant="secondary", size="sm", min_width=60, interactive=False)
-
+                mem_btn = gr.Button('🗑️ Clear GPU/CPU Memory', variant='secondary', size='sm', min_width=60)
+                mem_btn.click(fn=clear_memory)
             seed = gr.Number(label="Random Seed", value=12345, precision=0)
 
             with gr.Accordion(open=True, label='Language Model'):
