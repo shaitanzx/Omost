@@ -379,4 +379,5 @@ with gr.Blocks(
         ], outputs=[chatInterface.chatbot_state])
 
 if __name__ == "__main__":
-    demo.queue().launch(inbrowser=True, server_name='0.0.0.0')
+    demo.queue().launch(inbrowser=True, server_name='0.0.0.0',share=True)
+    
